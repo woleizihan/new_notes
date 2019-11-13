@@ -44,3 +44,43 @@ These two algos let you implement some sort of ordering on ranges, which you can
 - can also use constant references: `struct PrefixConstRef {std::string const& value;}`
 
 ## Reusing code for implementation
+`std::mismatch` on the strings
+
+## Raising the level of abstraction to ranges
+We can wrap `std::mismatch` in an interface that expect the strings themselves.
+
+## The problem of 1.5 ranges
+We can manually check the size in wrappers: `if (range1.size() <= range2.size())...`
+
+## Checking for prefix in any sequence
+Just need to make the Prefix/MainSequence structs generic: `template<typename T> Prefix<T>`
+
+# Understanding the implementation of $std::is_permutation$
+`is_permutation` takes two collections and then returns a `bool`, which indicates whether the two collections ahve the same contents with possibly different order.
+
+## Naive by wrong implementation
+For each element in the first collection, check if it is part of the second collection. But this will not work if there are repeated elements.
+
+## Implementing a correct version of `is_permutation`
+We want to check if each value in the first collectionappears the same number of times in both collections.
+- For each element in the first collection check the number of occurence in both collections using `std::count`
+
+## Counting each value only once
+
+## Not counting a value that is not in the second collection
+
+## Not counting the beginning of the first collection
+
+# How to use `is_permutation` on collections of different types
+For `std::permutation` both collections have to contain values of the same type
+
+## The reason of the requirement
+- No such rule for `std::equal`
+- Maybe the requirement comes from the fact that the comparison function needs to also be able to compare elements from the first collection together.
+
+## What having the same value types prevents us to do
+We can't use custom compare functions
+
+## Checking for a permutation on different types
+- We can use custom `is_permutation` function
+- We can overload comparison operator
