@@ -173,4 +173,49 @@ Not good since the program has no way to react to the ocndition that led to `clo
 - Use member functions give flexibility over teh read-write access
 - Encapsulating gives flexibility over different implemetations
 - `protected` data members are not better: if we remove a `protected` data member, all code involves derived classes will be broken
-- 
+
+### Prefer non-member non-friend functions to member functions
+- Object-oriented principles: data should be as encapsulated as possible
+- If something is encapsulated, it's hidden from view  and ti affords us teh flexibility to change thins in a way that affects only a limited number of clients
+- Encapsulation can be measured by how many things can see the data member
+- Member functions can see the `private` data members
+- A non-member, non-friend function can't access teh data members directly
+- We can have it in the same namespace as the class
+- We can put all convenience functions in multiple header files but on e namespace
+
+### Declare non-member functions when type conversions should apply to all parameters
+- Parameters are eligible for implicit type conversion only if they are listed in the parameter list
+- Therefore, by making `operator*` a non-member function, we can allow compilers to perform implicit type conversions on all arguments
+
+### Consider support for a non-throwing `swap`
+- `swap` is a mainstay of exception-safe programming and a common mechanism for coping with the possiblity of assignment to self
+
+## Implementations
+### Postpone variable definitions as long as possible
+- Variable might be unused if an exception is thrown
+- Initialize with data is better than default ctor + assignment
+- Variable that's used in a for-loop:
+  - Define outside the loop: 1 constructor, 1 destructor, n assignment
+  - Define within the loop: n constructor, n destructor
+
+### Minimize casting
+- In C++, casting is a feature you want to approach with great respect
+- Different castings:
+  - `(T) expression`, `T(expression)`
+  - `const_cast<T>(expression)`: cast away the constness of objects
+  - `dynamic_cast<T>(expression)`: "safe downcasting", to determine whether an object is of a particular type in an inheritance hierarchy
+  - `reinterpret_cast<T>(expression)`: low-level casts that yield implementation-dependent results, e.g. casting a pointer to an `int`
+  - `static_cast<T>(expression)`: force implicit conversion
+- `static_cast<Window>(*this).onResize()` does not call the function for the base class directly. The cast creates a new, temporary copy of the base class part of `*this`, then invokes `onResize` on the copy.
+  - If the function modifies the current object, it will only happen on the copy instead of the original object
+  - The solution is to eliminate the cast
+- The need for `dynamic_cast` generally arises because you want to perform derived class operations on what you believe to be a derived class object but only with a pointer or reference to base. Two ways to avoid:
+  - Use containers to store teh derived class directly
+  - Define virtual functions in the base class
+- Avoid cascasding `dynamic_casts`
+
+### Avoid returning "handles" to object internals
+- Return references only when expecting clients to modify the data
+- If a `const` member function returns a pointer, client could use the returned reference to modify data member
+- A data member is only as encapsulated as the most accessible function returning a reference to it
+- Instead, return `const` references. But this can leave handles that refer to parts of objects that don't exist any longer
