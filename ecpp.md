@@ -1,7 +1,7 @@
 ## Accustoming yourself to C++
 ### Use `const` whenever possible
 - `const iterator` vs `const_iterator`: for the first, the iterator itself is constant but can change the content pointed to; for the second, we can change the iterator but not the content pointed to
-- `const` member function:
+- `const` member function:How many batches are there in one epoch? Or more directly, 
   - which functions may modify an object and which may not
   - make it possible to work with const object
   - however, `const` function may change the content of a member pointer because it doens't change the pointer itself
@@ -219,3 +219,316 @@ Not good since the program has no way to react to the ocndition that led to `clo
 - If a `const` member function returns a pointer, client could use the returned reference to modify data member
 - A data member is only as encapsulated as the most accessible function returning a reference to it
 - Instead, return `const` references. But this can leave handles that refer to parts of objects that don't exist any longer
+
+### Strive for exception-safe code
+
+- Leak no resources
+- Don't allow data structures to become corrupted
+
+- Functions offering the basic guarantee: if an exception is thrown, everything in the program remains in a valid state.
+- Functions offering the strong guarantee promise that if an exception is thrown, the state of the program is unchanged
+- Functions offering the nothrow guarantee promise never to throw exceptions, because they always do what they promise to do
+
+- General strategy for strong guarantee: copy and swap. This is usually implemented by putting all the per-object data from the "real" object into a separate implementation object, then giving the real object a pointer to its implementation object
+- A function can usually offer a guarantee no stronger than the weakest guarantee of the functions it calls
+
+### Understand the ins and outs of inlining
+
+- Inline function: to replace each call of that function with its code body
+- Inline can be implicit or explicit:
+  - Implicit: define a function within a class definition
+  - Explicit: use the keyword `inline` 
+- Inline functions must typically be in header files because inlining is done during compilation
+- Calls to an inline function may or may not be inlined, depending on how the calls are made
+  - For instance, calls through a function pointer to the inline function may not be inlined
+
+- Constructors and destructors are often worse candidates for inlining
+  - An empty constructor or destructor may not be "empty". Compiler may have put something in it. e.g. `try/catch` 
+
+### Minimize compilation dependencies between files
+
+- We can hide the object implementation behind a pointer by dividing a class into two
+  - One offering only an interface
+  - The other  implementing that interface
+- The main class contains as a data member nothing but a pointer to its implementation class
+- Avoid using objects when object references and pointers will do
+- Depend on class declarations instead of class definitions whenever you can. In particular, we nevver need a class definition to declare a function using that class, not even if the function passes or returns the class type by value.
+- Provide separate header files for declarations and definitions
+- Interface class: the purpose is to specify an interface for derived classes
+  - No data members
+  - No constructors
+  - A virtual destructor
+  - A set of pure virtual functions that specify the interface
+  - Clients of interface classes must program in terms of pointers and references because it's not possible to instantiate classes containing pure virtual functions
+  - Use a static factory function to create real objects
+
+## Inheritance and Object-Oriented Design
+
+### Make sure public inheritance models "is-a."
+
+### Avoid hiding inherited names
+
+- Name-hiding rules: hides global variables with same name
+- Searching order:
+  - local scope
+  - derived class
+  - base class
+  - namespace
+  - global scope
+- Overloaded functions in the base class may not be inherited by the derived class because of name-hiding
+- Override default C++ name-hiding:
+  - `using Base::function;` 
+
+### Differentiate between inheritance of interface and inheritance of implementation
+
+- Public inheritance is composed of two separable parts:
+  - inheritance of function interfaces
+  - inheritance of function implementations
+- Member function interfaces are always inherited
+- Pure virtual function: have derived classes inherit a  function interface only
+- Simple virtual function: have derived class inherit a function interface and a default implementation
+- Separate a simple virtual function into a pure virtual interface and a `protected` default implementation
+- Non-virtual function: have derived classes inherit a function interface as well as a mandatory implementation
+
+### Consider alternatives to virtual functions
+
+- The template method pattern via the non-virtual interface idiom
+  - Same `public` interface that calls virtual `private` functions
+  - We can have codes before/after the call and make sure the proper context is set up/cleaned up
+- The strategy pattern via function pointers
+  - Require a function to be passed in when constructing the object
+  - However, this function won't have access to non-public data and therefore might affect encapsulation
+- The strategy pattern via `tr1::function`
+  - `tr1::function` can hold any callable object
+- The "classic" strategy pattern
+
+### Never redefine an inherited non-virtual function
+
+- If a non-virtual function is redefined `*Base ptr->function` will be different
+- Non-virtual functions are statically  bound, meaning that if we define a derived pointer as a base pointer, the function called will be the base function
+
+### Never redefine a function's inherited default parameter value
+
+- Default parameter values are statically bound, i.e. bound to the static type (the type declared to have in the program text)
+- Dynamic type: the type of the object to which it currently refers
+- The dynamic type of an pointer and change
+- We can use the non-virtual interface idiom to get around: use a public non-virtual function to call a private virtual function. The default parameter is set in the non-virtual interface and therefore can't be modified
+
+### Model "has-a" or "is-implemented-in-terms-of" through composition
+
+- Composition: objects of one type contain objects of another type
+
+- For instance, a "set" contains a "list" but is not a "list" because "list" can have duplicate elements
+
+### Use private inheritance judiciously
+
+- Compilers will generally not convert a derived class object into a base class object if the inheritance is private
+- The members inherited from a private base class become private members of the derived class, even if they were protected or public in the base class
+- Private inheritance means "is-implemented-in-terms-of", only to take advantage of some of the features in the base class
+- Private inheritance vs composition: use composition whenever you can, use private inheritance whenever you must:
+  - Must use private inheritance when protected members/virtual functions enter the picture
+- Private inheritance can also enable the empty base optimization
+
+### Use multiple inheritance judiciously
+
+- It's possible to inherit the same name from more than one base class and this leads to ambiguity
+  - To resolve the ambiguity, we must specify which base class's function to call
+- We might have an inheritance hierarchy with more than one path between a base class and a derived class (deadly MI diamond)
+  - Whether the data members in the base class to be replicated for each of the paths?
+  - By default, C++ replicates
+  - To get around this, we can make all classes that immediately inherit from it use virtual inheritance
+- Multiple inheritance can combine public inheritance from an interface class with private inheritance from a class that helps with implementation
+
+## Templates and Generic Programming
+
+### Understand the two meanings of `typename`
+
+- `template<class T>` vs `template<typename T>` : nothing
+- Nested dependent names (e.g. `C::const_iterator`) can lead to parsing difficulties because `C::const_iterator` might not be a typename
+- We need to tell C++ that `C::const_iterator` is a type by adding `typename C::const_iterator`
+- Anytime you refer to a nested dependent type name in a template, you must immediately precede it by the word typename
+- Exception: nested dependent typenames in a list of base classes or as a base class identifier in a member initialization list
+
+### Know how to access names in templatized base classes
+
+- Calling base class functions from a derived class won't compile if templatized
+  - The template parameter won't be known until later (when the derived class is instantiated)
+  - We can have totally templatized classes of the base class that doesn't have the function
+- We have to disable C++'s "don't look in templatized base classes" behavior
+  - Preface calls with `this`: `this->base_class_function()`
+  - Employ a `using` declaration: `using BaseClass<T>::base_class_function()`
+  - Explicitly specify the base function is in the base class: `BaseClass<T>::base_class_function()`
+
+### Factor parameter-independent code out of templates
+
+- Using template can lead to *code bloat*: binaries with replicated code. We can have source code that looks fit and trim but object code that's fat and flabby
+- In non-template code, replication is explicit: you can see that there's a duplication between two functions or two classes
+- In template code, replication is implicit: there's only one copy of the template source code
+- Can use a base class with part of the parameters as `template`
+- There's a trade-off in efficiency:
+  - With more template variables, we have more compile-time constants which give chance of compile-time optimization
+  - Having only one version of the function decreases the size of the executable
+- Templates generate multiple classes and multiple functions, so any template code not dependent on a template parameter causes bloat
+- Bloat due to non-type template parameters can often be eliminated by replacing template parameters with function parameters or class data members
+- Bloat due to type parameters can be reduced by sharing implementations for instantiation types with identical binary representations
+
+### Use member function templates to accept "all compatible types"
+
+- One of the things that real pointers do well is support implicit conversions. Derived class pointers implicitly convert into base class pointers, pointers to `non-const` objects convert into pointers to `const` objects ......
+
+- We have to program such conversions among smart pointers, we have to program them explicitly
+
+- We need conversion between any two type parameters for the template
+
+- We can do this by a constructor template:
+
+  `template<typename U>`
+
+  `SmartPtr(const SmartPtr<U>& other);`
+
+- Type conversions among built-in pointer types are implicit and require no cast, so it's reasonable for smart pointers to emulate that behavior
+
+- We can restrict the conversions only to those we want by taking advantage of raw pointer conversion
+
+  `SmartPtr(const SmartPtr<U>& other): heldPtr(other.get()) {}`
+
+  `T* get() const {return heldPtr;}`
+
+  `private:`
+
+  `T* heldPtr t;`
+
+- This can also be used to support assignment
+- The compiler may generate default copy constructors. Declaring a generalized copy constructor in a class doesn't keep compilers from generating their own copy constructor. So we can declare a copy constructor as private
+
+### Use traits classes for information about types
+
+- `andvance` moves a specified iterator a specified distance
+
+- Five categories of iterators
+
+  - Input iterators: only move forward, only one step at a time, read what they're pointing to only once
+  - Output iterators: only move forward, only one step at a time, only write what they point to once
+  - Forward iterators: only move forward, only one step at a time, read/write multiple times
+  - Bidirectional iterators: add in ability to move in both directions
+  - Random access iterators: add in the ability to do "iterator arithmetic", i.e. to jump forward/backward an arbitrary distance
+
+- There's a "tag struct" in the standard library to identify each type: `struct input_iterator_tag {};`
+
+- To implement the `advance` function, we can do things differently depending on whether the iterator is a random access iterator
+
+- The traits information for a type must be external to the type.
+
+  `template<typename IterT>`
+
+  `struct iterator_traits`
+
+- Any user-defined iterator type must contain a nested typedef named `iterator_category` that identifies the appropriate tag struct
+
+  `typedef random_access_iterator_tag iterator_category`
+
+- `iterator_traits` just parrots back the iterator class's nested typedef:
+
+  `template<typename IterT>`
+
+  `struct iterator_traits {typedef typename IterT::iterator_category}`
+
+- The second part of the `iterator_traits` handles iterators that are pointers
+
+  `template<typename T>`
+
+  `struct iterator_traits<T*> {typedef random_access_iteartor_tag iterator_category}`
+
+- Extract the trait information: 
+
+  `if (typeid(typename std::iterator_traits<IterT>::iterator_category) == typeid(std::random_access_iterator_tag))`
+
+- However, the `typename` is known at compilation while the if statement is only evaluated at runtime
+
+- Overload is like if statement at compiling time: overload with extra parameter
+
+  `void doAdvance(IterT& iter, DistT d, std::random_access_iterator_tag)`
+
+  `void doAdvance(IterT& iter, DistT d, std::bidirectional_iterator_tag)`
+
+- Then wrap with `advance` function:
+
+  `void advance(IterT& iter, DistT d)`
+
+  `{`
+
+  ​	`doAdvance(iter, d, typename std::iterator_traits<IterT>::iterator_category())`
+
+  `}`
+
+- Traits classes make information about types available during compilation. They are implemented using templates and template specialization
+- In conjunction with overloading, traits classes make it possible to perform compile-time `if/else` tests on types
+
+### Be aware of template metaprogramming
+
+- Template metaprogramming: process of writing template-based C++ programs that execute during compilation
+  - It makes things easy that would otherwise be hard or impossible
+  - Template metaprograms run at compile-time
+- `if/else` statement via overloading
+- `for` loops via recursion
+  - use `enum` when you need the value of a class during compilation
+
+- TMP can accomplish
+  - Ensuring dimensional unit correctness
+  - Optimizing matrix operations
+  - Generating custom design pattern implementations
+
+
+
+## Customizing `new` and `delete`
+
+### Understand the behavior of the new-handler
+
+- Before `new` throws an exception in response to an unsatisfiable request for memory, it calls a client-specifiable error-handling function called a `new-handler`
+
+- `new-handler` is a typedef for a pointer to a function that takes and returns nothing
+
+- `set_new_handler` is a function that takes and returns a `new_handler`
+
+- We can have the following behavior for a `new_handler`:
+
+  - Make more memory available
+  - Install a different new-handler
+  - Deinstall the new-handler
+  - Throw an exception
+  - Not return
+
+- The class's operator `new` ensures that the class-specific new-handler is used in place of the global new-handler when memory for class objects is installed
+
+  `public:`
+
+  ​	`static std::new_handler set_new_handler(std::new_handler p) throw();`
+
+  ​	`static void* operator new(std::size_t size) throw(std::bad_alloc);`
+
+  `private:`
+
+  ​	`static std::new_handler currentHandler;`
+
+- `set_new_handler` allows you to specify a function to be called when memory allocation requests cannot be satisfied
+
+- Nothrow `new` is of limited utility because it applies only to memory allocation; associated constructor calls may still throw exception
+
+### Understand when it makes sense to replace `new` and `delete`
+
+- There are three of the most common reasons:
+  - To detect usage error
+  - To improve efficiency
+  - To collect usage statistics
+  - To increase the speed of allocation and deallocation
+  - To reduce the space overhead of a default memory management
+  - To compensate for suboptimal alignment in the default allocator
+  - To cluster related objects near one another
+  - To obtain unconventional behavior
+
+## Miscellany
+
+### Pay attention to compiler warnings
+
+- Take compiler warnings seriously, and strive to compile warning-free at the maximum warning level supported by the compilers
+- Don't become dependent on compiler warnings, because different compilers warn about different things. Porting to a new compiler may eliminate warning messages you've come to rely on.
