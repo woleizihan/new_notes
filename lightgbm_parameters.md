@@ -2,15 +2,18 @@
 
 **TODO**
 
-- [ ] What's "lambda rank"
-
-- [ ] Math expressions for evaluation metrics
-- [ ] What's "number of bins for feature bucket"
-- [ ] Understand tree learner
-
-- [ ] Physical core or virtual core used
-- [ ] How is bagging used
-- [ ] What is "sum Hessian" for one leaf
+- [x] What's "lambda rank"
+- [x] Math expressions for evaluation metrics
+- [x] What's "number of bins for feature bucket"
+- [x] Understand tree learner
+  - https://zhanpengfang.github.io/418home.html
+  - Different learner improves performance in parallel computing mode
+- [x] Physical core or virtual core used
+- [x] How is bagging used
+  - http://www.ccs.neu.edu/home/vip/teach/MLcourse/4_boosting/materials/bagging_lmbamart_jforests.pdf
+  - Bagging can be used as a variance reduction method
+- [x] What is "sum Hessian" for one leaf
+  - Sum of second order derivatives of the loss with respect to predictions
 
 
 
@@ -53,12 +56,36 @@
 **Evaluation metrics** (`metric`, support multiple metrics delimited by `,`)
 
 - `l1`, `l2` (default for regression)
-- `ndcg` (default for landbdarank)
-- `auc`
+
+- `ndcg` (discounted cumulative gain, default for landbdarank)
+  $$
+  DCG_p = \sum_{i=1}^p \frac{rel_i}{\log_2(i+1)},
+  $$
+  where $rel_i$ is the graded relevance of the result at position $i$.
+
+- `auc` (area under the ROC curve)
+  $$
+  TPR = \frac{TP}{TP + FN}, \hspace{5px} FPR = \frac{FP}{FP + TN}
+  $$
+
+  - ROC curve plots TPR vs FPR at different classification thresholds. Lowering the classification threshold classifies more item as positive, thus increasing both FP and TP.
+  - The bigger the area, the faster TPR grows compared to FPR
+
 - `binary_logloss` (default for binary)
+  $$
+  -\frac{1}{m}\sum_i y_i \log h(x_i) + (1-y_i)\log(1-h(x_i))
+  $$
+  
+
 - `binary_error`
+  $$
+  \frac{1}{m} \sum_i \textbf{1}(y_i \neq h(x_i))
+  $$
+  
 
 **Number of bins for feature bucket** (`max_bin`, `255` is recommended)
+
+This is used to turn continuous features into discrete bins.
 
 **Number of trees** (`num_trees`, this is the same as `num_boost_round` in `lgd.train`)
 
@@ -70,6 +97,7 @@
 
 - `serial`: single machine version
 - `feature`: use feature parallel to train
+  - For each level, parallel with respect to features. This avoids sorting the instances of the node by the feature value
 - `data`: use data parallel to train
 - `voting`: use voting based parallel to train
 
@@ -83,6 +111,10 @@
 
 **Minimal sum Hessians for one leaf** (`min_sum_hession_in_leaf`, this helps to deal with overfitting)
 
+This is the sum of the second derivatives of loss with respect to predictions:
+$$
+\sum_i\frac{\partial^2 L(y_i, \hat{y}_i)}{\partial \hat{y}_i^2}
+$$
 **Force splits** (`forced_splits`, `.json` file)
 
 
