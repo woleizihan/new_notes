@@ -76,7 +76,6 @@
   -\frac{1}{m}\sum_i y_i \log h(x_i) + (1-y_i)\log(1-h(x_i))
   $$
   
-
 - `binary_error`
   $$
   \frac{1}{m} \sum_i \textbf{1}(y_i \neq h(x_i))

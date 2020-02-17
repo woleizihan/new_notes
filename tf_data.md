@@ -19,7 +19,7 @@ dataset = tf.data.Dataset.from_generator(count, args=[25], output_types=tf.int32
 **From lines in fies**
 
 ```python
-dataset = tf.data.TextLineDataset(["file1.txt", "file2.txt"]
+dataset = tf.data.TextLineDataset(["file1.txt", "file2.txt"])
 ```
 
 **From `TFRecord`**
