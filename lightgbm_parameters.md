@@ -49,7 +49,7 @@
 
 **Application type** (`objective`)
 
-- `bainry`: binary classification
+- `binary`: binary classification
 - `regression`: regression task
 - `lambdarank`: lambda rank task
 
@@ -76,7 +76,6 @@
   -\frac{1}{m}\sum_i y_i \log h(x_i) + (1-y_i)\log(1-h(x_i))
   $$
   
-
 - `binary_error`
   $$
   \frac{1}{m} \sum_i \textbf{1}(y_i \neq h(x_i))
@@ -91,7 +90,7 @@ This is used to turn continuous features into discrete bins.
 
 **Learning rate** (`learning_rate`)
 
-**Force splits** (`forced_splits`)Number of leaves for one tree** (`num_leaves`)
+**Force splits** (`forced_splits`)Number of leaves for one tree (`num_leaves`)
 
 **Type of tree learner** (`tree_learner`)
 
